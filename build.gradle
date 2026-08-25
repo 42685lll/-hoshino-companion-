@@ -1,11 +1,18 @@
+rootProject.name = "Hoshino Companion"
+include ':app'
+
 pluginManagement {
-repositories {
+    repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
     }
 }
 
-plugins {
-id'com.android.application'version'8.2.2'applyfalse
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
