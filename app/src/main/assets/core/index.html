@@ -1,26 +1,31 @@
 <!doctype html>
-<html lang="zh-CN">
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>星野</title>
-    <style>
-        body { margin: 0; padding: 0; background: #1a1a2e; overflow: hidden; }
-        #wave { display: block; margin: 0 auto; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>starhoshino</title>
+<style>
+html,body{margin:0;background:#0b0f1a;color:#fff;font-family:sans-serif;}
+.box{padding:24px;font-size:20px;}
+button{padding:10px 16px;font-size:16px;}
+</style>
 </head>
 <body>
-    <canvas id="wave" width="300" height="100"></canvas>
-    <script src="ai_core.js"></script>
-    <script src="bridge.js"></script>
-    <script>
-        // 原生 VAD 判停(静音500ms)后回调 JS：
-        function onUserEnd(utter) {
-            if (!utter || !window.HoshinoCore) return;
-            window.HoshinoCore.handleUserSpeechInput(utter).then(function(reply) {
-                console.log('AI Reply:', reply);
-            });
-        }
-    </script>
+<div class="box">
+  StarHoshino WebView OK<br>
+  NativeBridge: <span id="b">checking...</span><br>
+  AndroidBridge: <span id="a">checking...</span><br>
+  <button onclick="test()">ping</button>
+</div>
+<script>
+function test(){
+  try {
+    document.body.style.background = "#102b3f";
+    if(window.NativeBridge){ NativeBridge.log("hello from js"); document.getElementById("b").innerText="yes"; }
+    if(window.AndroidBridge){ AndroidBridge.ping(); document.getElementById("a").innerText="yes"; }
+  } catch(e){ document.body.innerText = "err:" + e; }
+}
+test();
+</script>
 </body>
 </html>
