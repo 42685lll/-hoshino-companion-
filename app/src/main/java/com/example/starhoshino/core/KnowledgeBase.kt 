@@ -1,0 +1,114 @@
+package com.example.starhoshino.core
+
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+class KnowledgeBase(private val storageDir: File) {
+
+    data class KnowledgeEntry(
+        var confidence: Float = 0.1f,
+        var mentionCount: Int = 0,
+        val userSaid: MutableList<String> = mutableListOf(),
+        val learned: MutableList<String> = mutableListOf(),
+        val gaps: MutableList<String> = mutableListOf(),
+        var firstMentioned: Long = System.currentTimeMillis(),
+        var lastMentioned: Long = System.currentTimeMillis()
+    )
+
+    private val db = mutableMapOf<String, KnowledgeEntry>()
+
+    init { load() }
+
+    fun extractKeywords(input: String): List<String> {
+        return input.split(Regex("[，。！？、；：\\s~!@#$%^&*()+=|{}\\[\\]<>/?]+"))
+            .filter { it.length >= 2 }
+            .take(5)
+    }
+
+    fun onUserInput(input: String) {
+        val keywords = extractKeywords(input)
+        for (kw in keywords) {
+            if (db.containsKey(kw)) {
+                val entry = db[kw]!!
+                entry.mentionCount++
+                entry.userSaid.add(input.take(100))
+                entry.lastMentioned = System.currentTimeMillis()
+                entry.confidence = minOf(1.0f, entry.confidence + 0.1f)
+                if (entry.gaps.isNotEmpty() && input.length > 5) {
+                    entry.learned.add("从对话学到：${input.take(50)}")
+                    entry.gaps.removeAt(0)
+                }
+            } else {
+                db[kw] = KnowledgeEntry(
+                    confidence = 0.1f,
+                    mentionCount = 1,
+                    userSaid = mutableListOf(input.take(100)),
+                    learned = mutableListOf("名字：$kw"),
+                    gaps = mutableListOf("这是什么", "你为什么提它", "跟你什么关系"),
+                    firstMentioned = System.currentTimeMillis(),
+                    lastMentioned = System.currentTimeMillis()
+                )
+            }
+        }
+        save()
+    }
+
+    fun checkUnknown(keyword: String): Pair<Boolean, String?> {
+        val entry = db[keyword] ?: return true to keyword
+        if (entry.confidence < 0.3f && entry.gaps.isNotEmpty()) {
+            return true to entry.gaps.first()
+        }
+        return false to null
+    }
+
+    fun findRelated(keywords: List<String>): List<KnowledgeEntry> {
+        return db.filter { (key, _) -> keywords.any { it in key } }
+            .map { it.value }
+            .sortedByDescending { it.lastMentioned }
+            .take(3)
+    }
+
+    private fun save() {
+        val json = JSONObject()
+        db.forEach { (key, entry) ->
+            json.put(key, JSONObject().apply {
+                put("confidence", entry.confidence)
+                put("mentionCount", entry.mentionCount)
+                put("userSaid", JSONArray(entry.userSaid))
+                put("learned", JSONArray(entry.learned))
+                put("gaps", JSONArray(entry.gaps))
+                put("firstMentioned", entry.firstMentioned)
+                put("lastMentioned", entry.lastMentioned)
+            })
+        }
+        File(storageDir, "knowledge.json").writeText(json.toString())
+    }
+
+    private fun load() {
+        val file = File(storageDir, "knowledge.json")
+        if (!file.exists()) return
+        val json = JSONObject(file.readText())
+        json.keys().forEach { key ->
+            val obj = json.getJSONObject(key)
+            db[key] = KnowledgeEntry(
+                confidence = obj.optDouble("confidence", 0.1).toFloat(),
+                mentionCount = obj.optInt("mentionCount", 0),
+                userSaid = mutableListOf<String>().apply {
+                    val arr = obj.optJSONArray("userSaid")
+                    if (arr != null) for (i in 0 until arr.length()) add(arr.getString(i))
+                },
+                learned = mutableListOf<String>().apply {
+                    val arr = obj.optJSONArray("learned")
+                    if (arr != null) for (i in 0 until arr.length()) add(arr.getString(i))
+                },
+                gaps = mutableListOf<String>().apply {
+                    val arr = obj.optJSONArray("gaps")
+                    if (arr != null) for (i in 0 until arr.length()) add(arr.getString(i))
+                },
+                firstMentioned = obj.optLong("firstMentioned", System.currentTimeMillis()),
+                lastMentioned = obj.optLong("lastMentioned", System.currentTimeMillis())
+            )
+        }
+    }
+}
