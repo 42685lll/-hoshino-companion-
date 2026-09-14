@@ -1,6 +1,7 @@
 package com.example.starhoshino
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.webkit.JavascriptInterface
@@ -36,18 +37,18 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
-        val bridge = NativeBridge()
+        val bridge = NativeBridge(this)
         webView.addJavascriptInterface(bridge, "NativeBridge")
         webView.addJavascriptInterface(bridge, "AndroidBridge")
 
         webView.loadUrl("file:///android_asset/core/index.html")
     }
 
-    class NativeBridge {
+    class NativeBridge(private val context: Context) {
 
         @JavascriptInterface
         fun ping(): String {
-            Log.i("STARHOSHINO", "JS ping called")
+            Log.i("STARHOSHINO", "ping")
             return "pong"
         }
 
@@ -57,13 +58,80 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
-        fun ready(): String {
-            return "ready"
-        }
+        fun ready(): String = "ready"
 
         @JavascriptInterface
         fun getPrompt(): String {
+            return try {
+                context.assets.open("core/prompt_hoshino.txt")
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+            } catch (e: Exception) {
+                Log.e("STARHOSHINO", "getPrompt failed", e)
+                ""
+            }
+        }
+
+        @JavascriptInterface
+        fun exec(sql: String?): String? {
+            Log.d("STARHOSHINO_DB", "exec: $sql")
+            return null
+        }
+
+        @JavascriptInterface
+        fun query(sql: String?): String {
+            Log.d("STARHOSHINO_DB", "query: $sql")
+            return "[]"
+        }
+
+        @JavascriptInterface
+        fun llm(json: String?): String {
+            Log.d("STARHOSHINO_LLM", "llm called")
+            return "（星野暂时无法回复）"
+        }
+
+        @JavascriptInterface
+        fun tts(text: String?) {
+            Log.d("STARHOSHINO_TTS", "tts: $text")
+        }
+
+        @JavascriptInterface
+        fun vadState(): String = "idle"
+
+        @JavascriptInterface
+        fun fileRead(name: String?): String {
+            Log.d("STARHOSHINO_FILE", "read: $name")
             return ""
+        }
+
+        @JavascriptInterface
+        fun fileWrite(name: String?, text: String?) {
+            Log.d("STARHOSHINO_FILE", "write: $name")
+        }
+
+        @JavascriptInterface
+        fun setWave(mode: String?) {
+            Log.d("STARHOSHINO_WAVE", "setWave: $mode")
+        }
+
+        @JavascriptInterface
+        fun setWaveAmp(amps: String?) {
+            Log.d("STARHOSHINO_WAVE", "setWaveAmp")
+        }
+
+        @JavascriptInterface
+        fun saveWarmLayer(json: String?) {
+            Log.d("STARHOSHINO_WARM", "saveWarmLayer")
+        }
+
+        @JavascriptInterface
+        fun exportChatJson(json: String?) {
+            Log.d("STARHOSHINO_EXPORT", "exportChatJson")
+        }
+
+        @JavascriptInterface
+        fun onCoreReady(status: String?) {
+            Log.i("STARHOSHINO", "Core ready: $status")
         }
     }
 
