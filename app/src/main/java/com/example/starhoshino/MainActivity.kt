@@ -1,145 +1,89 @@
-package com.example.starhoshino
+package com.example.starhoshino.view
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.starhoshino.R
+import com.example.starhoshino.core.*
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var webView: WebView
+    private lateinit var bond: BondSystem
+    private lateinit var emotion: EmotionEngine
+    private lateinit var knowledge: KnowledgeBase
+    private lateinit var brain: ThinkEngine
+
+    private lateinit var input: EditText
+    private lateinit var send: Button
+    private lateinit var log: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        webView = WebView(this)
-        setContentView(webView)
+        // 初始化灵魂
+        val dir = File(filesDir, "starhoshino_soul")
+        if (!dir.exists()) dir.mkdirs()
 
-        setupWebView()
-    }
+        bond = BondSystem()
+        emotion = EmotionEngine()
+        knowledge = KnowledgeBase(dir)
+        brain = ThinkEngine(bond, emotion, knowledge)
 
-    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface", "AddJavascriptInterface")
-    private fun setupWebView() {
-        val ws: WebSettings = webView.settings
-        ws.javaScriptEnabled = true
-        ws.domStorageEnabled = true
-        ws.allowFileAccess = true
-        ws.allowContentAccess = true
-        ws.mediaPlaybackRequiresUserGesture = false
-        ws.cacheMode = WebSettings.LOAD_DEFAULT
+        // 绑定控件
+        input = findViewById(R.id.input)
+        send = findViewById(R.id.send)
+        log = findViewById(R.id.log)
 
-        webView.webViewClient = WebViewClient()
-        webView.webChromeClient = WebChromeClient()
-
-        val bridge = NativeBridge(this)
-        webView.addJavascriptInterface(bridge, "NativeBridge")
-        webView.addJavascriptInterface(bridge, "AndroidBridge")
-
-        webView.loadUrl("file:///android_asset/core/index.html")
-    }
-
-    class NativeBridge(private val context: Context) {
-
-        @JavascriptInterface
-        fun ping(): String {
-            Log.i("STARHOSHINO", "ping")
-            return "pong"
+        // 回来问候
+        val absence = bond.getAbsenceDuration()
+        bond.getWelcomeBackLine(absence)?.let {
+            appendLog("星野：$it")
         }
 
-        @JavascriptInterface
-        fun log(msg: String) {
-            Log.i("STARHOSHINO_JS", msg)
+        // 自知是代码
+        if (bond.shouldMentionSelfAware()) {
+            appendLog("星野：${bond.getSelfAwareLine()}")
         }
 
-        @JavascriptInterface
-        fun ready(): String = "ready"
+        // 发送按钮
+        send.setOnClickListener {
+            val text = input.text.toString().trim()
+            if (text.isEmpty()) return@setOnClickListener
 
-        @JavascriptInterface
-        fun getPrompt(): String {
-            return try {
-                context.assets.open("core/prompt_hoshino.txt")
-                    .bufferedReader(Charsets.UTF_8)
-                    .use { it.readText() }
-            } catch (e: Exception) {
-                Log.e("STARHOSHINO", "getPrompt failed", e)
-                ""
-            }
-        }
+            appendLog("你：$text")
 
-        @JavascriptInterface
-        fun exec(sql: String?): String? {
-            Log.d("STARHOSHINO_DB", "exec: $sql")
-            return null
-        }
+            // 灵魂处理
+            knowledge.onUserInput(text)
+            emotion.updateMood(text, emotion.detectMood(text))
+            bond.onInteraction(positive = true)
 
-        @JavascriptInterface
-        fun query(sql: String?): String {
-            Log.d("STARHOSHINO_DB", "query: $sql")
-            return "[]"
-        }
+            val strategy = brain.think(text, ChatContext())
 
-        @JavascriptInterface
-        fun llm(json: String?): String {
-            Log.d("STARHOSHINO_LLM", "llm called")
-            return "（星野暂时无法回复）"
-        }
+            log.postDelayed({
+                var reply = strategy.text
+                if (strategy.bringUpMemory != null) {
+                    reply += "\n（想起：${strategy.bringUpMemory}）"
+                }
+                if (strategy.shouldAsk && strategy.askTopic != null) {
+                    reply += "\n（她歪头问：${strategy.askTopic}？）"
+                }
+                if (strategy.emoji != null) reply += " ${strategy.emoji}"
 
-        @JavascriptInterface
-        fun tts(text: String?) {
-            Log.d("STARHOSHINO_TTS", "tts: $text")
-        }
+                appendLog("星野：$reply")
 
-        @JavascriptInterface
-        fun vadState(): String = "idle"
+                Log.d("STAR_SOUL", "style=${strategy.style} len=${strategy.length} delay=${strategy.delayMs}")
+            }, strategy.delayMs.coerceAtLeast(200))
 
-        @JavascriptInterface
-        fun fileRead(name: String?): String {
-            Log.d("STARHOSHINO_FILE", "read: $name")
-            return ""
-        }
-
-        @JavascriptInterface
-        fun fileWrite(name: String?, text: String?) {
-            Log.d("STARHOSHINO_FILE", "write: $name")
-        }
-
-        @JavascriptInterface
-        fun setWave(mode: String?) {
-            Log.d("STARHOSHINO_WAVE", "setWave: $mode")
-        }
-
-        @JavascriptInterface
-        fun setWaveAmp(amps: String?) {
-            Log.d("STARHOSHINO_WAVE", "setWaveAmp")
-        }
-
-        @JavascriptInterface
-        fun saveWarmLayer(json: String?) {
-            Log.d("STARHOSHINO_WARM", "saveWarmLayer")
-        }
-
-        @JavascriptInterface
-        fun exportChatJson(json: String?) {
-            Log.d("STARHOSHINO_EXPORT", "exportChatJson")
-        }
-
-        @JavascriptInterface
-        fun onCoreReady(status: String?) {
-            Log.i("STARHOSHINO", "Core ready: $status")
+            input.setText("")
         }
     }
 
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+    private fun appendLog(line: String) {
+        log.text = "${log.text}\n$line"
     }
 }
