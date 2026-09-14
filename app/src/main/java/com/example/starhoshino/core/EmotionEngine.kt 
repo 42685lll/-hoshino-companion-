@@ -1,0 +1,42 @@
+package com.example.starhoshino.core
+
+class EmotionEngine {
+
+    enum class Mood { HIGH, NEUTRAL, LOW }
+
+    data class EmotionState(
+        var current: Mood = Mood.NEUTRAL,
+        var intensity: Float = 0.3f,
+        var lastChanged: Long = System.currentTimeMillis()
+    )
+
+    private val state = EmotionState()
+
+    fun detectMood(input: String): Mood {
+        val negWords = listOf("累", "烦", "难过", "emo", "哭", "伤心", "生气", "讨厌", "不想", "难受", "委屈")
+        val posWords = listOf("哈哈", "开心", "喜欢", "爱你", "好笑", "爽", "棒", "😂", "🤣", "嘿嘿", "嘻嘻")
+
+        val negCount = negWords.count { it in input }
+        val posCount = posWords.count { it in input }
+
+        return when {
+            negCount > posCount -> Mood.LOW
+            posCount > negCount -> Mood.HIGH
+            else -> Mood.NEUTRAL
+        }
+    }
+
+    fun updateMood(input: String, userMood: Mood) {
+        val newMood = if (userMood != Mood.NEUTRAL) userMood else detectMood(input)
+        if (newMood != state.current) {
+            state.current = newMood
+            state.intensity = 0.5f
+            state.lastChanged = System.currentTimeMillis()
+        } else {
+            state.intensity = minOf(1.0f, state.intensity + 0.1f)
+        }
+    }
+
+    fun getCurrentMood(): Mood = state.current
+    fun getIntensity(): Float = state.intensity
+}
