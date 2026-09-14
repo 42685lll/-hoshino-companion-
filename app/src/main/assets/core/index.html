@@ -3,29 +3,65 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>starhoshino</title>
+<title>StarHoshino</title>
 <style>
-html,body{margin:0;background:#0b0f1a;color:#fff;font-family:sans-serif;}
-.box{padding:24px;font-size:20px;}
-button{padding:10px 16px;font-size:16px;}
+html,body{margin:0;background:#0b0f1a;color:#e6e6ff;font-family:sans-serif;}
+.box{padding:24px;font-size:18px;line-height:1.8;}
+button{padding:10px 16px;font-size:16px;margin-top:12px;}
+.err{color:#ffb3b3;white-space:pre-wrap;margin-top:16px;font-size:14px;}
+.ok{color:#7fff7f;}
 </style>
 </head>
 <body>
 <div class="box">
-  StarHoshino WebView OK<br>
-  NativeBridge: <span id="b">checking...</span><br>
-  AndroidBridge: <span id="a">checking...</span><br>
-  <button onclick="test()">ping</button>
+  <div id="status">页面已加载 ✅</div>
+  <div>NativeBridge: <span id="b">checking...</span></div>
+  <div>AndroidBridge: <span id="a">checking...</span></div>
+  <button onclick="pingAll()">测试桥接</button>
+  <button onclick="loadOriginal()">加载原前端</button>
+  <div class="err" id="err"></div>
 </div>
+
 <script>
-function test(){
-  try {
-    document.body.style.background = "#102b3f";
-    if(window.NativeBridge){ NativeBridge.log("hello from js"); document.getElementById("b").innerText="yes"; }
-    if(window.AndroidBridge){ AndroidBridge.ping(); document.getElementById("a").innerText="yes"; }
-  } catch(e){ document.body.innerText = "err:" + e; }
+function setErr(m){ document.getElementById('err').textContent += m + '\n'; }
+window.onerror = function(e){ setErr('ERROR: ' + e); };
+window.addEventListener('unhandledrejection', function(e){ setErr('PROMISE: ' + (e.reason && e.reason.message || e.reason)); });
+
+try {
+  var b = typeof window.NativeBridge;
+  var a = typeof window.AndroidBridge;
+  document.getElementById('b').textContent = b + (b==='object' ? ' ✅ ping=' + NativeBridge.ping() : ' ❌');
+  document.getElementById('a').textContent = a + (a==='object' ? ' ✅ ping=' + AndroidBridge.ping() : ' ❌');
+  if(b==='object') NativeBridge.log('index.html loaded');
+  if(a==='object') AndroidBridge.log('index.html loaded');
+} catch(e){
+  setErr('init error: ' + e);
 }
-test();
+
+function pingAll(){
+  try {
+    if(window.NativeBridge){ NativeBridge.log("ping test"); document.getElementById("b").textContent="✅ pong"; }
+    if(window.AndroidBridge){ AndroidBridge.log("ping test"); document.getElementById("a").textContent="✅ pong"; }
+  } catch(e){ setErr("ping error: " + e); }
+}
+
+function loadOriginal(){
+  document.getElementById('status').textContent = '正在加载原前端...';
+  setErr('');
+  try {
+    var s1 = document.createElement('script');
+    s1.src = 'ai_core.js';
+    s1.onerror = function(){ setErr('ai_core.js 加载失败'); };
+    document.body.appendChild(s1);
+
+    var s2 = document.createElement('script');
+    s2.src = 'bridge.js';
+    s2.onerror = function(){ setErr('bridge.js 加载失败'); };
+    document.body.appendChild(s2);
+
+    document.getElementById('status').textContent = '原前端已加载，看下面有无报错 ↓';
+  } catch(e){ setErr('loadOriginal error: ' + e); }
+}
 </script>
 </body>
 </html>
