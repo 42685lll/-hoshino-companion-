@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="星野灵魂测试"
+        android:textSize="18sp"
+        android:textColor="#e0e0e0"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/log"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="点发送开始聊天\n"
+        android:textSize="14sp"
+        android:textColor="#cccccc"
+        android:scrollbars="vertical"
+        android:background="#0f0f1e"
+        android:padding="8dp" />
+
+    <EditText
+        android:id="@+id/input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="说点什么…"
+        android:textColor="#ffffff"
+        android:textColorHint="#666666"
+        android:maxLines="3" />
+
+    <Button
+        android:id="@+id/send"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="发送"
+        android:textColor="#ffffff"
+        android:backgroundTint="#e91e8c" />
+
+</LinearLayout>
