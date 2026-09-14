@@ -1,37 +1,34 @@
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StarHoshino</title>
-<style>
-html,body{margin:0;background:#0b0f1a;color:#e6e6ff;font-family:sans-serif;}
-.box{padding:24px;font-size:18px;line-height:1.8;}
-button{padding:10px 16px;font-size:16px;margin:8px 8px 0 0;}
-.err{color:#ffb3b3;white-space:pre-wrap;margin-top:16px;font-size:14px;}
-.ok{color:#7fff7f;}
-#stage{margin-top:14px;color:#cfd6ff;white-space:pre-wrap;font-size:14px;}
-</style>
-</head>
 <body>
+<div id="app"></div>
+<div id="root"></div>
+<div id="container"></div>
+<div id="stage"></div>
+<div id="chat"></div>
+<div id="ui"></div>
+
 <div class="box">
   <div id="status">诊断页面 ✅</div>
   <div>NativeBridge: <span id="b">checking...</span></div>
   <div>AndroidBridge: <span id="a">checking...</span></div>
   <div>ai_core.js: <span id="s1">未加载</span></div>
   <div>bridge.js: <span id="s2">未加载</span></div>
+  <div>HoshinoAI: <span id="h1">未检查</span></div>
+  <div>HoshinoBridge: <span id="h2">未检查</span></div>
   <button onclick="loadOriginal()">加载原前端</button>
   <button onclick="checkGlobals()">检查全局</button>
-  <div id="stage"></div>
+  <button onclick="testChat()">测试 chat()</button>
+  <div id="log"></div>
   <div class="err" id="err"></div>
 </div>
 
 <script>
-function log(m){ document.getElementById('stage').textContent += m + '\n'; }
+function log(m){ document.getElementById('log').textContent += m + '\n'; }
 function err(m){ document.getElementById('err').textContent += m + '\n'; }
 
 window.onerror = function(e){ err('ERROR: ' + e); };
-window.addEventListener('unhandledrejection', function(e){ err('PROMISE: ' + (e.reason && e.reason.message || e.reason)); });
+window.addEventListener('unhandledrejection', function(e){
+  err('PROMISE: ' + (e.reason && e.reason.message || e.reason));
+});
 
 var b = typeof window.NativeBridge;
 var a = typeof window.AndroidBridge;
@@ -48,24 +45,72 @@ function loadOriginal(){
 
   var s2 = document.createElement('script');
   s2.src = 'bridge.js';
-  s2.onload = function(){ document.getElementById('s2').textContent = '✅ 已加载'; log('bridge.js 加载成功'); setTimeout(checkGlobals, 500); };
+  s2.onload = function(){
+    document.getElementById('s2').textContent = '✅ 已加载';
+    log('bridge.js 加载成功');
+    setTimeout(checkGlobals, 500);
+    setTimeout(function(){
+      log('body children: ' + document.body.children.length);
+      log('body html 长度: ' + document.body.innerHTML.length);
+      log('HoshinoAI: ' + typeof window.HoshinoAI);
+      log('HoshinoBridge: ' + typeof window.HoshinoBridge);
+      document.getElementById('h1').textContent = typeof window.HoshinoAI;
+      document.getElementById('h2').textContent = typeof window.HoshinoBridge;
+      if(window.HoshinoAI) log('HoshinoAI.chat 类型: ' + typeof window.HoshinoAI.chat);
+      if(window.HoshinoBridge) log('HoshinoBridge.raw: ' + (window.HoshinoBridge.raw ? '有桥' : '无桥'));
+    }, 800);
+  };
   s2.onerror = function(){ document.getElementById('s2').textContent = '❌ 失败'; err('bridge.js 加载失败'); };
   document.body.appendChild(s2);
 }
 
 function checkGlobals(){
-  var names = ['SH','StarHoshino','AI','AiCore','aiCore','Bridge','app','state','init','start','main'];
-  var found = [];
-  names.forEach(function(n){
-    if(typeof window[n] !== 'undefined') found.push(n + '=' + typeof window[n]);
-  });
-  if(found.length > 0){
-    log('找到全局对象: ' + found.join(', '));
+  log('检查全局...');
+  document.getElementById('h1').textContent = typeof window.HoshinoAI;
+  document.getElementById('h2').textContent = typeof window.HoshinoBridge;
+
+  if(window.HoshinoAI){
+    log('✅ HoshinoAI 已暴露');
+    log('chat: ' + typeof window.HoshinoAI.chat);
+    log('memory dialogues: ' + window.HoshinoAI.memory.hotLayer.dialogues.length);
   } else {
-    log('没有找到已知全局对象，原前端可能用模块化/闭包/没暴露到 window');
-    err('原前端加载了但没暴露全局接口，可能用 IIFE/模块化，需要看 ai_core.js 开头');
+    log('⚠️ window.HoshinoAI 不存在');
+  }
+
+  if(window.HoshinoBridge){
+    log('✅ HoshinoBridge 已暴露');
+    log('raw bridge: ' + (window.HoshinoBridge.raw ? '有' : '无'));
+  } else {
+    log('⚠️ window.HoshinoBridge 不存在');
+  }
+
+  var skip = new Set(['window','document','HTMLElement','Element','Node','Object','Array','Function','String','Number','Boolean','Math','JSON','Promise','console','navigator','location','history','localStorage','sessionStorage','performance','fetch','XMLHttpRequest','WebSocket','NativeBridge','AndroidBridge','HoshinoAI','HoshinoBridge']);
+  var found = [];
+  Object.keys(window).forEach(function(k){
+    if(skip.has(k)) return;
+    var t = typeof window[k];
+    if(t === 'function' || (t === 'object' && window[k] !== null)){
+      found.push(k + ':' + t);
+    }
+  });
+  if(found.length){
+    log('其它暴露项(前50): ' + found.slice(0,50).join(', '));
+  } else {
+    log('其它额外暴露对象/函数：无');
+  }
+}
+
+function testChat(){
+  if(!window.HoshinoAI){
+    err('HoshinoAI 还没暴露，先加载原前端/检查全局');
+    return;
+  }
+  try {
+    var r = window.HoshinoAI.chat('前辈，在吗？');
+    log('chat 返回: ' + r);
+  } catch(e){
+    err('chat 报错: ' + (e && e.message || e));
   }
 }
 </script>
 </body>
-</html>
