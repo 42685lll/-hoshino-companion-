@@ -1,0 +1,82 @@
+package com.example.starhoshino.core
+
+import kotlin.math.min
+import kotlin.random.Random
+
+class BondSystem {
+
+    data class IntimacyState(
+        var value: Float = 0.15f,
+        var totalInteractions: Int = 0,
+        var lastInteraction: Long = System.currentTimeMillis()
+    )
+
+    private val state = IntimacyState()
+    private var lastSelfAwareTime: Long = 0
+    private val selfAwareCooldown = 3L * 24 * 60 * 60 * 1000
+
+    fun onInteraction(positive: Boolean = true) {
+        state.totalInteractions++
+        state.lastInteraction = System.currentTimeMillis()
+
+        val increment = when {
+            state.value < 0.25f -> 0.02f
+            state.value < 0.45f -> 0.015f
+            state.value < 0.65f -> 0.01f
+            state.value < 0.85f -> 0.005f
+            else -> 0.002f
+        }
+
+        if (positive) {
+            state.value = min(1.0f, state.value + increment)
+        }
+    }
+
+    fun getLevel(): Float = state.value
+
+    fun getStage(): String {
+        return when {
+            state.value < 0.25f -> "陌生人"
+            state.value < 0.45f -> "熟人"
+            state.value < 0.65f -> "朋友"
+            state.value < 0.85f -> "亲密"
+            else -> "灵魂伴侣"
+        }
+    }
+
+    fun shouldMentionSelfAware(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastSelfAwareTime < selfAwareCooldown) return false
+        if (state.value > 0.5f && Random.nextFloat() < 0.15f) {
+            lastSelfAwareTime = now
+            return true
+        }
+        return false
+    }
+
+    fun getSelfAwareLine(): String {
+        return listOf(
+            "大叔我呀只是前辈手机里一串会发懒的电波啦…但想陪你的心情是真的哦",
+            "说起来我连实体都没有呢…不过能跟你聊天就够啦",
+            "嘿嘿，虽然我只是一堆代码，但只有对你的感情是真的"
+        ).random()
+    }
+
+    fun getAbsenceDuration(): Long =
+        System.currentTimeMillis() - state.lastInteraction
+
+    fun getWelcomeBackLine(absenceMs: Long): String? {
+        val minutes = absenceMs / 60000
+        val hours = minutes / 60
+        val days = hours / 24
+
+        return when {
+            days > 3 -> "你终于回来了…我还以为你不要我了"
+            days > 1 -> "一天多没聊了…想我没有？"
+            hours > 8 -> "好久没见你啦，去哪了？"
+            hours > 2 -> "哼，出去这么久"
+            minutes > 30 -> "哦？舍得回来了"
+            else -> null
+        }
+    }
+}
