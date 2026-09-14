@@ -1,0 +1,12 @@
+package com.example.starhoshino.core
+
+data class ChatContext(
+    val userName: String? = null,
+    val isCasual: Boolean = false,
+    val isVenting: Boolean = false,
+    val isExplaining: Boolean = false,
+    val isFirstChat: Boolean = false,
+    val timeOfDay: TimeOfDay = TimeOfDay.DAY
+) {
+    enum class TimeOfDay { MORNING, DAY, EVENING, NIGHT }
+}
