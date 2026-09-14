@@ -7,60 +7,64 @@
 <style>
 html,body{margin:0;background:#0b0f1a;color:#e6e6ff;font-family:sans-serif;}
 .box{padding:24px;font-size:18px;line-height:1.8;}
-button{padding:10px 16px;font-size:16px;margin-top:12px;}
+button{padding:10px 16px;font-size:16px;margin:8px 8px 0 0;}
 .err{color:#ffb3b3;white-space:pre-wrap;margin-top:16px;font-size:14px;}
 .ok{color:#7fff7f;}
+#stage{margin-top:14px;color:#cfd6ff;white-space:pre-wrap;font-size:14px;}
 </style>
 </head>
 <body>
 <div class="box">
-  <div id="status">页面已加载 ✅</div>
+  <div id="status">诊断页面 ✅</div>
   <div>NativeBridge: <span id="b">checking...</span></div>
   <div>AndroidBridge: <span id="a">checking...</span></div>
-  <button onclick="pingAll()">测试桥接</button>
+  <div>ai_core.js: <span id="s1">未加载</span></div>
+  <div>bridge.js: <span id="s2">未加载</span></div>
   <button onclick="loadOriginal()">加载原前端</button>
+  <button onclick="checkGlobals()">检查全局</button>
+  <div id="stage"></div>
   <div class="err" id="err"></div>
 </div>
 
 <script>
-function setErr(m){ document.getElementById('err').textContent += m + '\n'; }
-window.onerror = function(e){ setErr('ERROR: ' + e); };
-window.addEventListener('unhandledrejection', function(e){ setErr('PROMISE: ' + (e.reason && e.reason.message || e.reason)); });
+function log(m){ document.getElementById('stage').textContent += m + '\n'; }
+function err(m){ document.getElementById('err').textContent += m + '\n'; }
 
-try {
-  var b = typeof window.NativeBridge;
-  var a = typeof window.AndroidBridge;
-  document.getElementById('b').textContent = b + (b==='object' ? ' ✅ ping=' + NativeBridge.ping() : ' ❌');
-  document.getElementById('a').textContent = a + (a==='object' ? ' ✅ ping=' + AndroidBridge.ping() : ' ❌');
-  if(b==='object') NativeBridge.log('index.html loaded');
-  if(a==='object') AndroidBridge.log('index.html loaded');
-} catch(e){
-  setErr('init error: ' + e);
-}
+window.onerror = function(e){ err('ERROR: ' + e); };
+window.addEventListener('unhandledrejection', function(e){ err('PROMISE: ' + (e.reason && e.reason.message || e.reason)); });
 
-function pingAll(){
-  try {
-    if(window.NativeBridge){ NativeBridge.log("ping test"); document.getElementById("b").textContent="✅ pong"; }
-    if(window.AndroidBridge){ AndroidBridge.log("ping test"); document.getElementById("a").textContent="✅ pong"; }
-  } catch(e){ setErr("ping error: " + e); }
-}
+var b = typeof window.NativeBridge;
+var a = typeof window.AndroidBridge;
+document.getElementById('b').textContent = b + (b==='object' ? ' ✅' : ' ❌');
+document.getElementById('a').textContent = a + (a==='object' ? ' ✅' : ' ❌');
 
 function loadOriginal(){
-  document.getElementById('status').textContent = '正在加载原前端...';
-  setErr('');
-  try {
-    var s1 = document.createElement('script');
-    s1.src = 'ai_core.js';
-    s1.onerror = function(){ setErr('ai_core.js 加载失败'); };
-    document.body.appendChild(s1);
+  log('开始加载原前端...');
+  var s1 = document.createElement('script');
+  s1.src = 'ai_core.js';
+  s1.onload = function(){ document.getElementById('s1').textContent = '✅ 已加载'; log('ai_core.js 加载成功'); };
+  s1.onerror = function(){ document.getElementById('s1').textContent = '❌ 失败'; err('ai_core.js 加载失败'); };
+  document.body.appendChild(s1);
 
-    var s2 = document.createElement('script');
-    s2.src = 'bridge.js';
-    s2.onerror = function(){ setErr('bridge.js 加载失败'); };
-    document.body.appendChild(s2);
+  var s2 = document.createElement('script');
+  s2.src = 'bridge.js';
+  s2.onload = function(){ document.getElementById('s2').textContent = '✅ 已加载'; log('bridge.js 加载成功'); setTimeout(checkGlobals, 500); };
+  s2.onerror = function(){ document.getElementById('s2').textContent = '❌ 失败'; err('bridge.js 加载失败'); };
+  document.body.appendChild(s2);
+}
 
-    document.getElementById('status').textContent = '原前端已加载，看下面有无报错 ↓';
-  } catch(e){ setErr('loadOriginal error: ' + e); }
+function checkGlobals(){
+  var names = ['SH','StarHoshino','AI','AiCore','aiCore','Bridge','app','state','init','start','main'];
+  var found = [];
+  names.forEach(function(n){
+    if(typeof window[n] !== 'undefined') found.push(n + '=' + typeof window[n]);
+  });
+  if(found.length > 0){
+    log('找到全局对象: ' + found.join(', '));
+  } else {
+    log('没有找到已知全局对象，原前端可能用模块化/闭包/没暴露到 window');
+    err('原前端加载了但没暴露全局接口，可能用 IIFE/模块化，需要看 ai_core.js 开头');
+  }
 }
 </script>
 </body>
