@@ -7,7 +7,11 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.starhoshino.R
-import com.example.starhoshino.core.*
+import com.example.starhoshino.core.BondSystem
+import com.example.starhoshino.core.EmotionEngine
+import com.example.starhoshino.core.KnowledgeBase
+import com.example.starhoshino.core.ThinkEngine
+import com.example.starhoshino.core.ChatContext
 import java.io.File
 
 class SoulTestActivity : AppCompatActivity() {
