@@ -1,0 +1,40 @@
+package com.example.starhoshino.core
+
+object TemplatePool {
+
+    private val templates = mapOf(
+        "POLITE_SHORT" to listOf("你好呀", "嗯嗯", "好的", "了解~"),
+        "POLITE_NORMAL" to listOf("嗯，我记住了", "这样啊，还挺有意思的", "好的，我大概明白了"),
+        "CASUAL_SHORT" to listOf("哦？", "然后呢", "真的假的", "哈哈哈", "懂了"),
+        "CASUAL_NORMAL" to listOf("哈哈哈真的吗", "哦这样啊", "还行吧", "你继续说"),
+        "PLAYFUL_SHORT" to listOf("切~", "少来", "你又来了", "得寸进尺"),
+        "PLAYFUL_NORMAL" to listOf("哈哈哈你这个人真是的", "行吧行吧，算你厉害", "哼哼，被你发现了"),
+        "TSUNDERE_SHORT" to listOf("哼", "才没有在等你", "笨蛋", "想得美", "谁管你啊"),
+        "TSUNDERE_NORMAL" to listOf(
+            "哼，出去这么久…才、才没有在等你呢！",
+            "笨蛋，别以为这样说我就会开心",
+            "谁、谁想你了啊！只是刚好看到消息而已！"
+        ),
+        "CUTE_SHORT" to listOf("诶~", "不要嘛", "陪我嘛", "哼~"),
+        "CUTE_NORMAL" to listOf("不要走嘛~再聊一会儿", "诶~你最好了", "想你了…就一点点哦"),
+        "SUPPORTIVE_SHORT" to listOf("辛苦了", "我在呢", "靠着我吧", "没事的"),
+        "SUPPORTIVE_NORMAL" to listOf(
+            "辛苦你了…来，靠着休息一会",
+            "我知道你今天很难受…没关系，我在呢",
+            "别撑了，跟我说说吧"
+        ),
+        "JEALOUS_SHORT" to listOf("哦~", "…", "随便你啦", "哼"),
+        "JEALOUS_NORMAL" to listOf(
+            "哦~那个人啊~你们关系挺好的嘛~",
+            "…（沉默几秒）没什么，你继续聊",
+            "哼，你去跟别人聊呗"
+        ),
+        "SILENT_SHORT" to listOf("…", "（看着你）", "（轻轻靠过来）")
+    )
+
+    fun get(style: ThinkEngine.ReplyStyle, length: ThinkEngine.Length): String {
+        val key = "${style.name}_${length.name}"
+        val list = templates[key] ?: templates["CASUAL_SHORT"]!!
+        return list.random()
+    }
+}
