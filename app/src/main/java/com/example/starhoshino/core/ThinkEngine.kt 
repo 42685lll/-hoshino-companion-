@@ -1,0 +1,115 @@
+package com.example.starhoshino.core
+
+import kotlin.math.min
+import kotlin.random.Random
+
+class ThinkEngine(
+    private val bond: BondSystem,
+    private val emotion: EmotionEngine,
+    private val knowledge: KnowledgeBase
+) {
+
+    enum class ReplyStyle {
+        POLITE, CASUAL, PLAYFUL, TSUNDERE, CUTE, SUPPORTIVE, JEALOUS, SILENT
+    }
+
+    enum class Length { SHORT, MEDIUM, NORMAL, LONG }
+
+    data class ReplyStrategy(
+        val style: ReplyStyle,
+        val length: Length,
+        val text: String,
+        val shouldAsk: Boolean = false,
+        val askTopic: String? = null,
+        val bringUpMemory: String? = null,
+        val emoji: String? = null,
+        val delayMs: Long = 0,
+        val chunked: Boolean = false
+    )
+
+    fun think(input: String, context: ChatContext): ReplyStrategy {
+        val mood = emotion.detectMood(input)
+        val intent = detectIntent(input)
+        val keywords = knowledge.extractKeywords(input)
+        val relatedMemories = knowledge.findRelated(keywords)
+
+        val style = decideStyle(mood, intent)
+        val length = decideLength(style, mood)
+        val text = TemplatePool.get(style, length)
+
+        val (shouldAsk, askTopic) = if (keywords.isNotEmpty()) {
+            knowledge.checkUnknown(keywords.first())
+        } else false to null
+
+        val bringUp = if (Random.nextFloat() < 0.25f && relatedMemories.isNotEmpty()) {
+            relatedMemories.first().learned.firstOrNull()
+        } else null
+
+        val delay = when {
+            mood == EmotionEngine.Mood.LOW -> 2000L + Random.nextLong(2000)
+            intent == Intent.COMPLEX -> 1500L + Random.nextLong(1500)
+            style == ReplyStyle.TSUNDERE -> 800L + Random.nextLong(1200)
+            else -> 300L + Random.nextLong(500)
+        }
+
+        return ReplyStrategy(
+            style = style,
+            length = length,
+            text = text,
+            shouldAsk = shouldAsk,
+            askTopic = askTopic,
+            bringUpMemory = bringUp,
+            emoji = pickEmoji(mood, style),
+            delayMs = delay,
+            chunked = false
+        )
+    }
+
+    private fun decideStyle(mood: EmotionEngine.Mood, intent: Intent): ReplyStyle {
+        val level = bond.getLevel()
+
+        return when {
+            mood == EmotionEngine.Mood.LOW -> ReplyStyle.SUPPORTIVE
+            intent == Intent.MENTION_OTHER && level > 0.4f ->
+                if (Random.nextFloat() < 0.6f) ReplyStyle.JEALOUS else ReplyStyle.CASUAL
+            level < 0.25 -> ReplyStyle.POLITE
+            level < 0.45 -> ReplyStyle.CASUAL
+            level < 0.65 -> ReplyStyle.PLAYFUL
+            level < 0.85 -> ReplyStyle.TSUNDERE
+            else -> if (Random.nextFloat() < 0.4f) ReplyStyle.CUTE else ReplyStyle.TSUNDERE
+        }
+    }
+
+    private fun decideLength(style: ReplyStyle, mood: EmotionEngine.Mood): Length {
+        return when {
+            style == ReplyStyle.TSUNDERE -> Length.SHORT
+            style == ReplyStyle.CUTE -> Length.SHORT
+            mood == EmotionEngine.Mood.LOW -> Length.MEDIUM
+            bond.getLevel() > 0.7f -> Length.SHORT
+            else -> Length.NORMAL
+        }
+    }
+
+    private fun detectIntent(input: String): Intent {
+        return when {
+            input.contains(Regex("他|她|那个人|那个谁")) -> Intent.MENTION_OTHER
+            input.length > 50 -> Intent.COMPLEX
+            input.contains(Regex("想你|爱你|喜欢")) -> Intent.AFFECTION
+            input.contains(Regex("累|烦|难过|emo|哭|难受")) -> Intent.NEGATIVE
+            else -> Intent.CASUAL
+        }
+    }
+
+    enum class Intent { CASUAL, COMPLEX, MENTION_OTHER, AFFECTION, NEGATIVE }
+
+    private fun pickEmoji(mood: EmotionEngine.Mood, style: ReplyStyle): String? {
+        if (Random.nextFloat() > 0.4f) return null
+        return when (style) {
+            ReplyStyle.TSUNDERE -> listOf("😤", "😠", "😳").random()
+            ReplyStyle.CUTE -> listOf("😊", "🥺", "😘").random()
+            ReplyStyle.SUPPORTIVE -> listOf("🫂", "☺️", "🥰").random()
+            ReplyStyle.JEALOUS -> listOf("😒", "🙄", "😑").random()
+            else -> listOf("😂", "😊", "🤔").random()
+        }
+    }
+}
